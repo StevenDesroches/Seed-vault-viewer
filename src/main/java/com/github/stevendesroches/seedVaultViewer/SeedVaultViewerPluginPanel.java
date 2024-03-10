@@ -13,13 +13,16 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.DefaultEditorKit;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Slf4j
 public class SeedVaultViewerPluginPanel extends PluginPanel {
 
-    //private final JLabel addMarker = new JLabel(ADD_ICON);
     private final JLabel title = new JLabel();
     private final JPanel markerView = new JPanel(new GridBagLayout());
 
@@ -33,8 +36,13 @@ public class SeedVaultViewerPluginPanel extends PluginPanel {
 
     protected JTextField searchField;
 
+
+    private ArrayList<SeedVaultItemPanel> seedVaultItemPanels;
+
     public SeedVaultViewerPluginPanel(SeedVaultViewer seedVaultViewerPlugin){
         this.seedVaultViewerPlugin =seedVaultViewerPlugin;
+
+        this.seedVaultItemPanels = new ArrayList<>();
 
         this.setLayout(new BorderLayout());
         //this.setBorder(new EmptyBorder(5,5,5,5));
@@ -47,6 +55,9 @@ public class SeedVaultViewerPluginPanel extends PluginPanel {
 
 
         this.searchField = new JTextField();
+        Action action = this.searchField.getActionMap().get(DefaultEditorKit.beepAction);
+        action.setEnabled(false);
+
         this.searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -130,51 +141,24 @@ public class SeedVaultViewerPluginPanel extends PluginPanel {
 
     public void search(String text) {
         if (text.isEmpty()) {
-            for (Component component : contentPanel.getComponents()) {
-                if (component instanceof JLabel) {
-                    JLabel label = (JLabel) component;
-                    label.setVisible(true);
+            seedVaultItemPanels.forEach((seedVaultItemPanel)->{
+                String name = seedVaultItemPanel.getSeedVaultItem().getName();
+                if(name.toLowerCase().contains(text.toLowerCase())){
+                    seedVaultItemPanel.setVisible(true);
+                } else {
+                    seedVaultItemPanel.setVisible(false);
                 }
-            }
+            });
         } else {
-            for (Component component : contentPanel.getComponents()) {
-                if (component instanceof JLabel) {
-                    JLabel label = (JLabel) component;
-
-
-                    if(Pattern.compile(Pattern.quote(text), Pattern.CASE_INSENSITIVE).matcher(label.getText()).find()){
-                        label.setVisible(true);
-                    } else {
-                        label.setVisible(false);
-                    }
-                            /*
-                            if (label.getText().contains(text)) {
-                                label.setVisible(true);
-                            } else {
-                                label.setVisible(false);
-                            }
-                             */
+            seedVaultItemPanels.forEach((seedVaultItemPanel)->{
+                String name = seedVaultItemPanel.getSeedVaultItem().getName();
+                if(name.toLowerCase().contains(text.toLowerCase())){
+                    seedVaultItemPanel.setVisible(true);
+                } else {
+                    seedVaultItemPanel.setVisible(false);
                 }
-            }
+            });
         }
-    }
-
-    public void addItem(net.runelite.api.Item item){
-
-
-        AsyncBufferedImage image =this.seedVaultViewerPlugin.getItemManager().getImage(item.getId(),item.getQuantity(),true);
-        String itemName = this.seedVaultViewerPlugin.getItemManager().getItemComposition(item.getId()).getName();
-        log.debug(itemName);
-
-        JLabel itemLabel = new JLabel();
-        itemLabel.setText(itemName + ":" + String.valueOf(item.getQuantity()));
-        image.addTo(itemLabel);
-
-        this.add(itemLabel);
-
-
-        repaint();
-        revalidate();
     }
 
     public void addItem(net.runelite.api.Item[] items) {
@@ -189,27 +173,16 @@ public class SeedVaultViewerPluginPanel extends PluginPanel {
         gbc.gridwidth = GridBagConstraints.REMAINDER;
 
         for (net.runelite.api.Item item : items) {
-            log.debug(String.valueOf(item.getId()));
             ItemComposition itemComposition = this.seedVaultViewerPlugin.getItemManager().getItemComposition(item.getId());
             if(itemComposition.getPlaceholderTemplateId() == 14401)
                 continue;
             if(itemComposition.getNote() == 799)
                 continue;
 
-            AsyncBufferedImage image = this.seedVaultViewerPlugin.getItemManager().getImage(item.getId(),item.getQuantity(),item.getQuantity() > 1);
-
-            String itemName = itemComposition.getName();
-
-            JLabel itemLabel = new JLabel();
-            image.addTo(itemLabel);
-            itemLabel.setOpaque(true);
-            //itemLabel.setBorder(new EmptyBorder(3,3,3,3));
-            itemLabel.setText(itemName);
-            itemLabel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-            this.contentPanel.add(itemLabel,gbc);
-
-            itemLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(ColorScheme.DARK_GRAY_COLOR), new EmptyBorder(5,5,5,5)));
+            SeedVaultItem seedVaultItem = new SeedVaultItem(item, this.seedVaultViewerPlugin.getItemManager());
+            SeedVaultItemPanel seedVaultItemPanel = new SeedVaultItemPanel(seedVaultItem);
+            this.seedVaultItemPanels.add(seedVaultItemPanel);
+            this.contentPanel.add(seedVaultItemPanel, gbc);
         }
 
         this.contentPanel.repaint();

@@ -11,6 +11,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.VarClientStrChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
@@ -45,6 +46,8 @@ public class SeedVaultViewer extends Plugin
 
 	@Inject
 	private ConfigManager configManager;
+	@Inject
+	private ClientThread clientThread;
 
 	private SeedVaultViewerPluginPanel pluginPanel;
 	private NavigationButton navigationButton;
@@ -74,7 +77,19 @@ public class SeedVaultViewer extends Plugin
 		clientToolbar.addNavigation(navigationButton);
 
 
+	client.getClientThread();
 
+		clientThread.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				String json = configManager.getConfiguration(CONFIG_GROUP,CONFIG_KEY);
+				//log.debug(json);
+				if(!Strings.isNullOrEmpty(json)){
+					Item[] items = gson.fromJson(json, Item[].class);
+					pluginPanel.addItem(items);
+				}
+			}
+		});
 
 		//this.itemManager = new ItemManager(this.client);
 
@@ -95,13 +110,13 @@ public class SeedVaultViewer extends Plugin
 		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
 		{
 			//client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "SeedVaultViewer says " + config.greeting(), null);
-
+/*
 			String json = configManager.getConfiguration(CONFIG_GROUP,CONFIG_KEY);
 			//log.debug(json);
 			if(!Strings.isNullOrEmpty(json)){
 				Item[] items = gson.fromJson(json, Item[].class);
 				this.pluginPanel.addItem(items);
-			}
+			}*/
 		}
 	}
 
